@@ -1,0 +1,45 @@
+template:
+    name: Generate SBOM
+    identifier: Generate_SBOM
+    versionLabel: v1
+    type: Step
+    projectIdentifier: Plugins
+    orgIdentifier: default
+    spec:
+        type: Run
+        spec:
+            connectorRef: account.Luke_Dockerhub
+            image: docker:dind
+            shell: Sh
+            command: |-
+                set -e
+
+                apk add curl
+
+                export DOCKER_HOME=~/.docker
+                mkdir -p $DOCKER_HOME
+
+                # install docker sbom cli plugin
+                curl -sSfL https://raw.githubusercontent.com/docker/sbom-cli-plugin/main/install.sh | sh -s --
+
+                docker sbom --quiet --format spdx-json --output "${outputDir}/sbom.spdx.json" "${image}:${tag}"
+                docker sbom --quiet --format cyclonedx-json --output "${outputDir}/sbom.cyclonedx.json" "${image}:${tag}"
+                docker sbom --quiet --format github-json --output "${outputDir}/sbom.github.json" "${image}:${tag}"
+                docker sbom --quiet --format syft-json --output "${outputDir}/sbom.syft.json" "${image}:${tag}"
+
+                # Print to screen
+                docker sbom --quiet "${image}:${tag}"
+
+                export outputDir=$outputDir
+            privileged: false
+            envVariables:
+                image: <+input>
+                tag: <+input>
+                outputDir: <+input>
+            outputVariables:
+                - name: outputDir
+    description: Leverage docker cli to generate SBOM from image.
+    tags:
+        security: ""
+        docker: ""
+        ci: ""
